@@ -1,0 +1,50 @@
+timestamp,message
+1640886325062,Starting SQL job: jose-4.sql
+1640886325170,do $$
+1640886325170,declare 
+1640886325170,target_template_version_id int := 7234;
+1640886325170,"reporting_keys varchar[] := '{officerInfoHeight, officerInfoWeight}';"
+1640886325170,reporting_key text;
+1640886325170,user_tag varchar := '__users';
+1640886325170,user_path text[] := ARRAY[user_tag];
+1640886325170,height_path text[];
+1640886325170,weight_path text[];
+1640886325170,cured_json jsonb;
+1640886325170,jsonb_key   text;
+1640886325170,jsonb_value jsonb;
+1640886325170,snapshot_id int;
+1640886325170,field_value_id int;
+1640886325170,form_to_cure json;
+1640886325170,fields int[];
+1640886325170,forms int[];
+1640886325170,begin 
+1640886325170,	-- Update snapshots
+1640886325170,	select array_agg(id) into forms from public.form f where template_version_id = target_template_version_id;
+1640886325170,"	for snapshot_id, form_to_cure in select id, ""content"" from public.""snapshot"" s where entity_id = ANY ('{164819}') and entity_type = 'Form'"
+1640886325170,	loop
+1640886325170,		cured_json = to_jsonb(form_to_cure::jsonb);
+1640886325170,"		for jsonb_key, jsonb_value in select * from jsonb_each(cured_json -> user_tag)"
+1640886325170,		loop
+1640886325170,			if jsonb_value ->> 'weight' is null then
+1640886325170,"				weight_path := array_append(array_append(user_path, jsonb_key),'weight');"
+1640886325170,"				cured_json := jsonb_set(cured_json, weight_path, '0'::jsonb);"
+1640886325170,			end if;
+1640886325170,			if jsonb_value ->> 'height' is null then
+1640886325170,"				height_path := array_append(array_append(user_path, jsonb_key),'height');"
+1640886325170,"				cured_json := jsonb_set(cured_json, height_path, '0'::jsonb);"
+1640886325170,			end if;	
+1640886325170,		end loop;
+1640886325170,		for reporting_key in select unnest(reporting_keys)
+1640886325170,		loop
+1640886325170,			if (cured_json -> reporting_key is not null) and (cured_json ->> reporting_key is null) then
+1640886325170,"				cured_json := jsonb_set(cured_json, reporting_key, '0'::jsonb);"
+1640886325170,			end if;
+1640886325170,		end loop;
+1640886325170,"	update public.""snapshot"" set ""content"" = cured_json where id = snapshot_id;"
+1640886325170,	end loop;
+1640886325170,	-- Update field values
+1640886325170,"	select array_agg(id) into fields from field f where ""name"" = any (reporting_keys);"
+1640886325170,	update public.field_value set number_value = 0 where id = any (select id from field_value fv where form_id = any (forms) and field_id = any (fields) and number_value is null);
+1640886325170,end$$;
+1640886325205,DO
+1640886325208,Completed SQL job: jose-4.sql
