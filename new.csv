@@ -1,0 +1,49 @@
+"Thu, 30 Dec 2021 11:45:25 CST",Starting SQL job: jose-4.sql
+"Thu, 30 Dec 2021 11:45:25 CST",do $$
+"Thu, 30 Dec 2021 11:45:25 CST",declare 
+"Thu, 30 Dec 2021 11:45:25 CST",target_template_version_id int := 7234;
+"Thu, 30 Dec 2021 11:45:25 CST","reporting_keys varchar[] := '{officerInfoHeight, officerInfoWeight}';"
+"Thu, 30 Dec 2021 11:45:25 CST",reporting_key text;
+"Thu, 30 Dec 2021 11:45:25 CST",user_tag varchar := '__users';
+"Thu, 30 Dec 2021 11:45:25 CST",user_path text[] := ARRAY[user_tag];
+"Thu, 30 Dec 2021 11:45:25 CST",height_path text[];
+"Thu, 30 Dec 2021 11:45:25 CST",weight_path text[];
+"Thu, 30 Dec 2021 11:45:25 CST",cured_json jsonb;
+"Thu, 30 Dec 2021 11:45:25 CST",jsonb_key   text;
+"Thu, 30 Dec 2021 11:45:25 CST",jsonb_value jsonb;
+"Thu, 30 Dec 2021 11:45:25 CST",snapshot_id int;
+"Thu, 30 Dec 2021 11:45:25 CST",field_value_id int;
+"Thu, 30 Dec 2021 11:45:25 CST",form_to_cure json;
+"Thu, 30 Dec 2021 11:45:25 CST",fields int[];
+"Thu, 30 Dec 2021 11:45:25 CST",forms int[];
+"Thu, 30 Dec 2021 11:45:25 CST",begin 
+"Thu, 30 Dec 2021 11:45:25 CST","	-- Update snapshots"
+"Thu, 30 Dec 2021 11:45:25 CST","	select array_agg(id) into forms from public.form f where template_version_id = target_template_version_id;"
+"Thu, 30 Dec 2021 11:45:25 CST","	for snapshot_id, form_to_cure in select id, ""content"" from public.""snapshot"" s where entity_id = ANY ('{164819}') and entity_type = 'Form'"
+"Thu, 30 Dec 2021 11:45:25 CST","	loop"
+"Thu, 30 Dec 2021 11:45:25 CST","		cured_json = to_jsonb(form_to_cure::jsonb);"
+"Thu, 30 Dec 2021 11:45:25 CST","		for jsonb_key, jsonb_value in select * from jsonb_each(cured_json -> user_tag)"
+"Thu, 30 Dec 2021 11:45:25 CST","		loop"
+"Thu, 30 Dec 2021 11:45:25 CST","			if jsonb_value ->> 'weight' is null then"
+"Thu, 30 Dec 2021 11:45:25 CST","				weight_path := array_append(array_append(user_path, jsonb_key),'weight');"
+"Thu, 30 Dec 2021 11:45:25 CST","				cured_json := jsonb_set(cured_json, weight_path, '0'::jsonb);"
+"Thu, 30 Dec 2021 11:45:25 CST","			end if;"
+"Thu, 30 Dec 2021 11:45:25 CST","			if jsonb_value ->> 'height' is null then"
+"Thu, 30 Dec 2021 11:45:25 CST","				height_path := array_append(array_append(user_path, jsonb_key),'height');"
+"Thu, 30 Dec 2021 11:45:25 CST","				cured_json := jsonb_set(cured_json, height_path, '0'::jsonb);"
+"Thu, 30 Dec 2021 11:45:25 CST","			end if;	"
+"Thu, 30 Dec 2021 11:45:25 CST","		end loop;"
+"Thu, 30 Dec 2021 11:45:25 CST","		for reporting_key in select unnest(reporting_keys)"
+"Thu, 30 Dec 2021 11:45:25 CST","		loop"
+"Thu, 30 Dec 2021 11:45:25 CST","			if (cured_json -> reporting_key is not null) and (cured_json ->> reporting_key is null) then"
+"Thu, 30 Dec 2021 11:45:25 CST","				cured_json := jsonb_set(cured_json, reporting_key, '0'::jsonb);"
+"Thu, 30 Dec 2021 11:45:25 CST","			end if;"
+"Thu, 30 Dec 2021 11:45:25 CST","		end loop;"
+"Thu, 30 Dec 2021 11:45:25 CST","	update public.""snapshot"" set ""content"" = cured_json where id = snapshot_id;"
+"Thu, 30 Dec 2021 11:45:25 CST","	end loop;"
+"Thu, 30 Dec 2021 11:45:25 CST","	-- Update field values"
+"Thu, 30 Dec 2021 11:45:25 CST","	select array_agg(id) into fields from field f where ""name"" = any (reporting_keys);"
+"Thu, 30 Dec 2021 11:45:25 CST","	update public.field_value set number_value = 0 where id = any (select id from field_value fv where form_id = any (forms) and field_id = any (fields) and number_value is null);"
+"Thu, 30 Dec 2021 11:45:25 CST",end$$;
+"Thu, 30 Dec 2021 11:45:25 CST",DO
+"Thu, 30 Dec 2021 11:45:25 CST",Completed SQL job: jose-4.sql
