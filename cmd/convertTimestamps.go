@@ -37,6 +37,7 @@ var convertTimestampsCmd = &cobra.Command{
 		defer file.Close()
 
 		reader := csv.NewReader(file)
+		reader.LazyQuotes = true
 
 		// // Skip first line
 		// if _, err := reader.Read(); err != nil {
