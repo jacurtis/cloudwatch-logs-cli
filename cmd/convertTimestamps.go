@@ -38,17 +38,17 @@ var convertTimestampsCmd = &cobra.Command{
 
 		reader := csv.NewReader(file)
 
-		// Skip first line
-		if _, err := reader.Read(); err != nil {
-			log.Fatal(err)
-		}
+		// // Skip first line
+		// if _, err := reader.Read(); err != nil {
+		// 	log.Fatal(err)
+		// }
 
 		records, err := reader.ReadAll()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		for _, record := range records {
+		for _, record := range records[1:] {
 			i, err := strconv.ParseInt(record[0], 10, 64)
 			if err != nil {
 				fmt.Println("Could not parse timestamps. Are they already converted?")
